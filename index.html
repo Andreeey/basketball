@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <script>
+      window.addEventListener("load", function(evt) {
+        document.getElementById("start_games").onclick = function(evt) {
+          var http = new XMLHttpRequest();
+          var url = 'http://127.0.0.1:8080/games';
+          var params = 'orem=ipsum&name=binny';
+          http.open('POST', url, true);
+          http.setRequestHeader("Content-Type", "application/json;charset=UTF-8")
+
+          http.onreadystatechange = function() {
+            if(http.status != 201) {
+              alert(http.responseText)
+              return
+            }
+            document.getElementById("games").innerHTML = ""
+            updateGames()
+          }
+          http.send(JSON.stringify([{"name": "Monday"}, {"name": "Tuesday"}, {"name": "Wednesday"}, {"name": "Thursday"}, {"name": "Friday"}, {"name": "Saturday"}, {"name": "Sunday"}]))
+        }
+
+        setInterval(updateGames, 5000)
+        updateGames()
+
+        // Start ws listener
+        ws = new WebSocket("ws://127.0.0.1:8080/ws");
+        ws.onmessage = function(evt) {
+          game = JSON.parse(evt.data)
+          var gameDiv = document.getElementById(game.Name)
+          if (gameDiv == null) {
+            return
+          }
+          if (game.TopScorer != null) {
+            gameDiv.getElementsByClassName("top_scorer")[0].textContent = game.TopScorer.Name
+            gameDiv.getElementsByClassName("with_score")[0].textContent = game.TopScorer.Score
+          }
+          if (game.TopAssist != null) {
+            gameDiv.getElementsByClassName("top_assist")[0].textContent = game.TopAssist.Name
+            gameDiv.getElementsByClassName("top_assist_score")[0].textContent = game.TopAssist.Assist
+          }
+        }
+      });
+
+      function updateGames() {
+        var http = new XMLHttpRequest();
+        var url = 'http://127.0.0.1:8080/games'
+        var params = 'orem=ipsum&name=binny'
+        http.responseType = 'json'
+        http.open('GET', url, true)
+        http.setRequestHeader("Content-Type", "application/json;charset=UTF-8")
+
+        http.onload = function() {
+          if(http.status != 200) {
+            alert(http.responseText)
+            return
+          }
+          if (http.response == null) {
+            return
+          }
+          http.response.forEach(function(game, i, arr){
+            fillGameData(game)
+          })
+        }
+        http.send();
+      }
+
+      function createGameDiv(game) {
+        gameDiv = document.createElement("div")
+        gameDiv.setAttribute("id", game.Name)
+        gameDiv.innerHTML = document.getElementById("game_template").innerHTML
+
+        document.getElementById("games").appendChild(gameDiv)
+
+        return gameDiv
+      }
+
+      function fillGameData(game) {
+        var gameDiv = document.getElementById(game.Name)
+        if (gameDiv == null) {
+          gameDiv = createGameDiv(game)
+        }
+
+        gameDiv.getElementsByClassName("game_name")[0].textContent = game.Name
+        if (game.TopScorer != null) {
+          gameDiv.getElementsByClassName("top_scorer")[0].textContent = game.TopScorer.Name
+          gameDiv.getElementsByClassName("with_score")[0].textContent = game.TopScorer.Score
+        }
+        if (game.TopAssist != null) {
+          gameDiv.getElementsByClassName("top_assist")[0].textContent = game.TopAssist.Name
+          gameDiv.getElementsByClassName("top_assist_score")[0].textContent = game.TopAssist.Assist
+        }
+        teams = gameDiv.getElementsByClassName("team")
+        fillTeam(teams[0], game.Teams[0])
+        fillTeam(teams[1], game.Teams[1])
+      }
+
+      function fillTeam(teamDiv, team) {
+        teamDiv.getElementsByClassName("team_name")[0].textContent = team.Name
+        teamDiv.getElementsByClassName("team_score")[0].textContent = team.Score
+        playersDivs = teamDiv.getElementsByTagName("tr")
+        counter = 1
+        team.Players.forEach(function(player, i, arr) {
+          cells = playersDivs[counter].getElementsByTagName("td")
+          cells[0].textContent = player.Name
+          cells[1].textContent = player.Score
+          cells[2].textContent = player.Assist
+          counter++
+        })
+        counter++
+        team.Bench.forEach(function(player, i, arr) {
+          cells = playersDivs[counter].getElementsByTagName("td")
+          cells[0].textContent = player.Name
+          cells[1].textContent = player.Score
+          cells[2].textContent = player.Assist
+          counter++
+        })
+      }
+    </script>
+</head>
+
+<style>
+    #games > div {
+        float: left;
+        border: 1px solid black;
+        margin: 5px;
+        padding: 5px;
+        width: 250px;
+    }
+
+    .team {
+    }
+</style>
+
+<body>
+
+<div style="text-align: center;">
+    <form>
+        <input type="button" value="Start next week games" id="start_games">
+    </form>
+</div>
+
+<div id="games">
+
+</div>
+<div id="game_template" style="display: none">
+    Game: <span class="game_name"></span><br>
+    Top scorer: <span class="top_scorer"></span> (<span class="with_score"></span>)<br>
+    Top assist: <span class="top_assist"></span> (<span class="top_assist_score"></span>)<br>
+    <div class="team">
+        Team: <span class="team_name"></span><br>
+        Score: <span class="team_score"></span><br>
+        <table border="1" width="100%">
+            <thead>Players</thead>
+            <tr><th>Name</th><th>Score</th><th>Assist</th></tr>
+            <tr><td></td><td></td><td></td></tr>
+            <tr><td></td><td></td><td></td></tr>
+            <tr><td></td><td></td><td></td></tr>
+            <tr><td></td><td></td><td></td></tr>
+            <tr><td></td><td></td><td></td></tr>
+        </table>
+        <table border="1" width="100%">
+            <thead>Bench</thead>
+            <tr><th>Name</th><th>Score</th><th>Assist</th></tr>
+            <tr><td></td><td></td><td></td></tr>
+            <tr><td></td><td></td><td></td></tr>
+            <tr><td></td><td></td><td></td></tr>
+            <tr><td></td><td></td><td></td></tr>
+            <tr><td></td><td></td><td></td></tr>
+            <tr><td></td><td></td><td></td></tr>
+            <tr><td></td><td></td><td></td></tr>
+        </table>
+    </div>
+    <div class="team">
+        Team: <span class="team_name"></span><br>
+        Score: <span class="team_score"></span><br>
+        <table border="1" width="100%">
+            <thead>Players</thead>
+            <tr><th>Name</th><th>Score</th><th>Assist</th></tr>
+            <tr><td></td><td></td><td></td></tr>
+            <tr><td></td><td></td><td></td></tr>
+            <tr><td></td><td></td><td></td></tr>
+            <tr><td></td><td></td><td></td></tr>
+            <tr><td></td><td></td><td></td></tr>
+        </table>
+        <table border="1" width="100%">
+            <thead>Bench</thead>
+            <tr><th>Name</th><th>Score</th><th>Assist</th></tr>
+            <tr><td></td><td></td><td></td></tr>
+            <tr><td></td><td></td><td></td></tr>
+            <tr><td></td><td></td><td></td></tr>
+            <tr><td></td><td></td><td></td></tr>
+            <tr><td></td><td></td><td></td></tr>
+            <tr><td></td><td></td><td></td></tr>
+            <tr><td></td><td></td><td></td></tr>
+        </table>
+    </div>
+</div>
+</body>
+</html>
